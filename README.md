@@ -6,6 +6,45 @@
 - 按分类目录保存到本地  
 - 提供 Web 前端界面触发下载与查看文件
 
+## 最小可运行指南（3步）
+
+### 1) 安装依赖
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+### 2) 一键跑通（下载 + 半衰期提取）
+
+```bash
+python3 - <<'PY'
+from app import api_download
+from pathlib import Path
+from analyze_half_life import analyze_drug_folder
+import pandas as pd
+
+drug_name = "bimekizumab"   # 可替换为任意药物
+max_results = 12
+
+r = api_download(term=drug_name, max_results=max_results, category=drug_name)
+print("downloaded:", r.get("downloaded_count"), "deduped:", r.get("deduped_count"), "failed:", r.get("failed_count"))
+
+result = analyze_drug_folder(Path("downloads") / drug_name)
+print("half_life_result:", result)
+Path("reports").mkdir(exist_ok=True)
+pd.DataFrame([result]).to_excel(Path("reports") / f"{drug_name}_half_life_report.xlsx", index=False)
+print("saved:", Path("reports") / f"{drug_name}_half_life_report.xlsx")
+PY
+```
+
+### 3) 验证输出
+
+- 下载文件夹：`downloads/<drug_name>/`
+- 半衰期报告：`reports/<drug_name>_half_life_report.xlsx`
+- 关键字段：`half_life_value`、`half_life_unit`、`half_life_hours`、`source_file`、`evidence`
+
+> 若只想看 Web 界面，再执行 `python3 app.py` 并访问 `http://127.0.0.1:8000`。
+
 ## 1. 安装依赖
 
 ```bash
