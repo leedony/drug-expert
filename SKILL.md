@@ -44,9 +44,15 @@ Given a drug name, complete this workflow end-to-end:
    - If from trial text/publication tied to NCT, report NCT.
    - If from non-trial review/label/database, mark as `non_trial_source` and give original citation.
 7. If half-life is still not found:
+   - Query regulatory/database PK sources in this order:
+     - FDA label (openFDA drug label)
+     - DailyMed SPL label
+     - DrugBank summary page
+   - If explicit half-life is found there, report as `found_external_label` with source URL.
+8. If still not found:
    - Return manual non-OA/paywalled links from query results.
    - Run external search and extract explicit PK statements when possible.
-8. Return merged results with priority ranking:
+9. Return merged results with priority ranking:
    - Tier A: explicit PK values (half-life preferred) with evidence + provenance
    - Tier B: NCT-linked efficacy/toxicity evidence without explicit PK
    - Tier C: background links only
@@ -210,6 +216,9 @@ Preferred external source types:
 - conference abstract pages
 - trial registry result pages
 - company medical/publication pages
+- FDA/openFDA label pages
+- DailyMed SPL label pages
+- DrugBank summary pages
 
 ## External Extraction Rule
 
@@ -277,3 +286,15 @@ Return:
   - a direct registry-publication link can be verified.
 - If phase or enrollment is missing in registry output, return explicit `unknown` (do not guess).
 - Clearly separate `efficacy` vs `toxicity/safety` findings in the final summary.
+
+## Other Skills
+
+This workflow does **not** invoke other Cursor Skills. It uses Python modules in this folder (`app.py`, `analyze_half_life.py`, etc.). For batch runs and PDF false-positive checks, see `ARCHITECTURE.md` and `scripts/run_drug_expert_full_from_inn_table.py`, `scripts/generate_per_drug_dossiers.py` in the pubmed repo (also mirrored on GitHub).
+
+## Batch / dossier (recommended for reporting)
+
+After per-drug PDF extraction, run dossier generation with **alias validation** before trusting `half_life_hours`:
+
+- Mark `FALSE_POSITIVE` when the evidence sentence does not mention the drug or its aliases.
+- Prefer `VALIDATED` local PDF rows, then DrugBank/DailyMed text with parsed units.
+- Merge into master table via `build_dossier_master_summary.py` (writes a **new** xlsx; does not overwrite the FC master file).
